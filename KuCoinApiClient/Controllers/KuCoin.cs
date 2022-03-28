@@ -11,7 +11,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using WebSocketSharp;
+using WebSocket4Net;
+using Microsoft.Extensions.Logging;
+
 
 namespace KuCoinApiClient.Controllers
 {
@@ -29,23 +31,29 @@ namespace KuCoinApiClient.Controllers
             return TokenMessClass.data.token;
         }
 
-        public async Task <IActionResult> Market()
+        private async Task <string> GetMarketDataBySocket()
         {
-            string MarketMessage = "null";
-            async Task GetMarketDataBySocket()
-            {
-                using (WebSocket socket = new WebSocket("wss://ws-api.kucoin.com/endpoint?token="+ GetToken()))
-                {              
-                    socket.OnMessage += (s, e) => { MarketMessage = e.Data.ToString(); };
-                    socket.Connect();
-                }
-            }
-            await GetMarketDataBySocket();
-
-            ViewBag.MarketData = MarketMessage;
-
+            string WelcomeMessage = "null";
+            var tcs = new TaskCompletionSource();
+            string token = await GetToken();
+            using var socket = new WebSocket ("wss://ws-api.kucoin.com/endpoint?token=" + token);
+            socket.MessageReceived += (s, e) =>
+           {
+               WelcomeMessage = e.Message.ToString();
+               tcs.TrySetResult();
+           };
+            socket.Open();
+            await tcs.Task;
+            return WelcomeMessage;
+           // ("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/spotMarket/level2Depth5:BTC-USDT\", \"response\": true }")), WebSocketMessageType.Text, false, System.Threading.CancellationToken.None);
+                    
+        }
+    public async Task<IActionResult> Market()
+        { 
+            var message =  await GetMarketDataBySocket();   
+            ViewBag.MarketData = message;            
             return View();
         }
     }        
-    }
+}
 

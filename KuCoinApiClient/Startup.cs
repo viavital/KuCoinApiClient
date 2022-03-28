@@ -23,6 +23,7 @@ namespace KuCoinApiClient
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSignalRCore();
             services.AddControllersWithViews();
         }
 
@@ -46,6 +47,10 @@ namespace KuCoinApiClient
 
             app.UseAuthorization();
 
+            app.Use(async (context, next) =>
+            {
+                await next.Invoke();
+            });
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
