@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using KuCoinApiClient.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace KuCoinApiClient.Services
 {
-    public class Data
+    public class DataForGetToken
     {
        public string token { get; set; }
        object instanceServers { get; set; }
@@ -17,7 +18,7 @@ namespace KuCoinApiClient.Services
     public class TokenMessageForSerilizaton
     {
         public string code { get; set; }
-        public Data data { get; set; }
+        public DataForGetToken data { get; set; }
     }
     public class GetTokenMessageService
     {
@@ -31,5 +32,6 @@ namespace KuCoinApiClient.Services
             var TokenMessClass = JsonConvert.DeserializeObject<TokenMessageForSerilizaton>(responseBody);
             return TokenMessClass.data.token;
         }
+       
     }
 }

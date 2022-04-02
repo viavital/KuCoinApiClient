@@ -1,3 +1,4 @@
+using KuCoinApiClient.Models;
 using KuCoinApiClient.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,10 +51,12 @@ namespace KuCoinApiClient
 
             app.UseAuthorization();
 
+            DataForOrderBook dataForOrderBook = new DataForOrderBook();
+            List<ChangesSteamBuffer> changesSteamBuffers = new List<ChangesSteamBuffer>();
+
             app.Use(async (context, next) =>
-            {
+            {                                
                 string MessageFromSocket = "null";
-                var tcs = new TaskCompletionSource();
                 GetTokenMessageService getTokenMessageServ = new GetTokenMessageService();
                 var token = await getTokenMessageServ.GetToken();
                 var socket = new WebSocket("wss://ws-api.kucoin.com/endpoint?token=" + token);
@@ -60,13 +64,44 @@ namespace KuCoinApiClient
                 {
                     MessageFromSocket = e.Message.ToString();
                     logger.LogInformation(MessageFromSocket);
+                    changesSteamBuffers.Add(JsonConvert.DeserializeObject<ChangesSteamBuffer>(MessageFromSocket));                    
                 };
-                socket.Opened += (s, e) => { socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/spotMarket/level2Depth5:BTC-USDT\", \"response\": true }"); };
+                socket.Opened += (s, e) => { socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/market/level2:BTC-USDT\", \"response\": true }"); };
                 socket.Open();
+                //доч≥куЇмось доки отримаЇмо перш≥ 2 пов≥домленн€
+                await Task.Run(()=> {
+                    while (changesSteamBuffers.Count < 2)
+                    {
+                    }
+                } );
+                // переходимо до наступного м≥длвера
                 await next.Invoke();
             });
+
+            app.Use(async (context, next) =>
+            {                   
+                DataForOrderBook dataForOrderBook = new DataForOrderBook(); 
+                GetOrderbooktService getOrderbook = new GetOrderbooktService("BTC-USDT");
+                dataForOrderBook = await getOrderbook.GetOrderbook();    // робимо снепшот д≥ючого стакана ц≥н            
+                changesSteamBuffers.RemoveAll(u => u.data == null); // видал€Їмо перш≥ 2 серв≥сн≥ пов≥домленн€ €к≥ неможливо привести до ChangesSteamBuffer
+                changesSteamBuffers.RemoveAll(u => u.data.sequenceStart <= dataForOrderBook.sequence); // видал€Їмо вс≥ пов≥домленн€ стар≥ш≥ в≥д нашого снепшоту
+                Task.Run(() =>
+                {
+                    while (true)  // безперервно перемаслаЇмо в паралельному потоц≥ кожне отримане пов≥домленн€ (прим≥н€Їмо зм≥ни до снепшоту)
+                    {
+                        if (changesSteamBuffers != null && changesSteamBuffers.Count > 0)
+                        {
+                            dataForOrderBook.AcceptChanges(changesSteamBuffers[0]); // чомусь викидуЇ Ќал–еференс≈ксепшн 
+                            changesSteamBuffers.RemoveAt(0);
+                        }
+                    }
+                });
+                await next.Invoke();
+            });
+
             app.UseEndpoints(endpoints =>
             {
+
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=KuCoin}/{action=Market}/{id?}");

@@ -13,16 +13,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using WebSocket4Net;
 using Microsoft.Extensions.Logging;
-
+using KuCoinApiClient.Models;
 
 namespace KuCoinApiClient.Controllers
 {
     public class KuCoin : Controller
     {
     public async Task<IActionResult> Market()
-        { 
-            var message = "Look on Console!!!";   
-            ViewBag.MarketData = message;            
+        {
+            //PartOrderBookModel MarketOrderbook = new PartOrderBookModel();
+            //GetOrderbooktService getOrderbook = new GetOrderbooktService("BTC-USDT");
+            //MarketOrderbook = await getOrderbook.GetOrderbook();
+            //BestBidAsk bestBidAsk = new BestBidAsk(MarketOrderbook);
+
+            //var message = "Best Bid price - " + bestBidAsk.BestBidPrice + "Best Bid size - " + bestBidAsk.BestBidSize +
+            //              "Best Ask price - " + bestBidAsk.BestAskPrice + "Best Bid price - " + bestBidAsk.BestAskSize;
+
+            //ViewBag.MarketData = message;            
             return View();
         }
     }        
