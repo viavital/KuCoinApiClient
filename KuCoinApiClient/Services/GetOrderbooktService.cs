@@ -20,9 +20,9 @@ namespace KuCoinApiClient.Services
         {
             HttpClient client = new HttpClient();    
             
-            HttpResponseMessage response = await client.GetAsync("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=" + Symbols); // кидає запит
+            HttpResponseMessage response = await client.GetAsync("https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=" + Symbols); // drop request
             response.EnsureSuccessStatusCode();
-            string responseBody = await response.Content.ReadAsStringAsync(); // виводить результат запиту на екран
+            string responseBody = await response.Content.ReadAsStringAsync(); 
             var orderbook = JsonConvert.DeserializeObject<PartOrderBookModel>(responseBody);
        
             return orderbook.data;

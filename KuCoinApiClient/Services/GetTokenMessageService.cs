@@ -32,6 +32,5 @@ namespace KuCoinApiClient.Services
             var TokenMessClass = JsonConvert.DeserializeObject<TokenMessageForSerilizaton>(responseBody);
             return TokenMessClass.data.token;
         }
-       
     }
 }

@@ -5,12 +5,7 @@ using System.Threading.Tasks;
 
 namespace KuCoinApiClient.Models
 {
-    //public struct Changes
-    //{
-    //    public float price { get; set; }
-    //    public float size { get; set; }
-    //    public ulong sequence { get; set; }
-    //}
+    
     public class ChangesOfBidsAsks
     {
         public float[][] asks { get; set; }
@@ -22,7 +17,7 @@ namespace KuCoinApiClient.Models
         public ChangesOfBidsAsks changes { get; set; }
         
     }
-    public class ChangesSteamBuffer
+    public class ChangesStreamBuffer
     {
       public  DataOfChangesSteamBuffer data { get; set; }
     }

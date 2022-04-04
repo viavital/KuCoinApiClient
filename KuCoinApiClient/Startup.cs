@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -52,7 +53,7 @@ namespace KuCoinApiClient
             app.UseAuthorization();
 
             DataForOrderBook dataForOrderBook = new DataForOrderBook();
-            List<ChangesSteamBuffer> changesSteamBuffers = new List<ChangesSteamBuffer>();
+            ConcurrentQueue<ChangesStreamBuffer> changesStreamBuffers = new ConcurrentQueue<ChangesStreamBuffer>();
 
             app.Use(async (context, next) =>
             {                                
@@ -62,18 +63,23 @@ namespace KuCoinApiClient
                 var socket = new WebSocket("wss://ws-api.kucoin.com/endpoint?token=" + token);
                 socket.MessageReceived += (s, e) =>
                 {
-                    MessageFromSocket = e.Message.ToString();
-                    logger.LogInformation(MessageFromSocket);
-                    changesSteamBuffers.Add(JsonConvert.DeserializeObject<ChangesSteamBuffer>(MessageFromSocket));                    
+                    MessageFromSocket = e.Message.ToString();                    
+                    var chStrBuffer = JsonConvert.DeserializeObject<ChangesStreamBuffer>(MessageFromSocket);
+                    if (chStrBuffer != null && chStrBuffer.data != null)
+                    {
+                        changesStreamBuffers.Enqueue(chStrBuffer);
+                    }                                     
                 };
                 socket.Opened += (s, e) => { socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/market/level2:BTC-USDT\", \"response\": true }"); };
                 socket.Open();
-                //доч≥куЇмось доки отримаЇмо перш≥ 2 пов≥домленн€
-                await Task.Run(()=> {
-                    while (changesSteamBuffers.Count < 2)
+
+                //wait for receveing first two messages
+                await Task.Run(()=>
+                {
+                    while (changesStreamBuffers.Count < 2)
                     {
                     }
-                } );
+                });
                 // переходимо до наступного м≥длвера
                 await next.Invoke();
             });
@@ -82,18 +88,19 @@ namespace KuCoinApiClient
             {                   
                 DataForOrderBook dataForOrderBook = new DataForOrderBook(); 
                 GetOrderbooktService getOrderbook = new GetOrderbooktService("BTC-USDT");
-                dataForOrderBook = await getOrderbook.GetOrderbook();    // робимо снепшот д≥ючого стакана ц≥н            
-                changesSteamBuffers.RemoveAll(u => u.data == null); // видал€Їмо перш≥ 2 серв≥сн≥ пов≥домленн€ €к≥ неможливо привести до ChangesSteamBuffer
-                changesSteamBuffers.RemoveAll(u => u.data.sequenceStart <= dataForOrderBook.sequence); // видал€Їмо вс≥ пов≥домленн€ стар≥ш≥ в≥д нашого снепшоту
+                dataForOrderBook = await getOrderbook.GetOrderbook();    // make a snapsot of OrderBook  
+                BestBidAsk bestBidAsk = new BestBidAsk(dataForOrderBook);
+                logger.LogInformation(bestBidAsk.ToString());
+                dataForOrderBook.BestAskBidChanchedEvent += () => { logger.LogInformation(bestBidAsk.ToString()); };
                 Task.Run(() =>
                 {
-                    while (true)  // безперервно перемаслаЇмо в паралельному потоц≥ кожне отримане пов≥домленн€ (прим≥н€Їмо зм≥ни до снепшоту)
+                    while (true)  // unbroken keep processing messages (apply changes to the snapshot)
                     {
-                        if (changesSteamBuffers != null && changesSteamBuffers.Count > 0)
+                        var hasoOne = changesStreamBuffers.TryDequeue(out var buffer);
+                        if (hasoOne)
                         {
-                            dataForOrderBook.AcceptChanges(changesSteamBuffers[0]); // чомусь викидуЇ Ќал–еференс≈ксепшн 
-                            changesSteamBuffers.RemoveAt(0);
-                        }
+                            dataForOrderBook.AcceptChanges(buffer);                           
+                        }      
                     }
                 });
                 await next.Invoke();
@@ -101,7 +108,6 @@ namespace KuCoinApiClient
 
             app.UseEndpoints(endpoints =>
             {
-
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=KuCoin}/{action=Market}/{id?}");
