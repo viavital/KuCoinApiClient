@@ -16,6 +16,10 @@ namespace KuCoinApiClient.Models
 
         internal void AcceptChanges(ChangesStreamBuffer changesStreamBuffer)
         {
+            if (changesStreamBuffer.data.sequenceStart <= this.sequence)
+            {
+                return;
+            }
             if (changesStreamBuffer.data.changes.asks.Length > 0 && changesStreamBuffer.data.changes.asks[0][0] != 0)
             {
                 for (int i = 0; i < 19; i++)
@@ -28,7 +32,7 @@ namespace KuCoinApiClient.Models
                 }
                 if (this.asks[0][0] == changesStreamBuffer.data.changes.asks[0][0])
                 {
-                    BestAskBidChanchedEvent();
+                    BestAskBidChanchedEvent?.Invoke();
                 }
             }
             if (changesStreamBuffer.data.changes.bids.Length > 0 && changesStreamBuffer.data.changes.bids[0][0] != 0)
@@ -42,7 +46,7 @@ namespace KuCoinApiClient.Models
                 }
                 if (this.bids[0][0] == changesStreamBuffer.data.changes.bids[0][0])
                 {
-                    BestAskBidChanchedEvent();
+                    BestAskBidChanchedEvent?.Invoke();
                 }
             }
         }
@@ -55,14 +59,13 @@ namespace KuCoinApiClient.Models
 
     public class BestBidAsk
     {
-        public BestBidAsk(DataForOrderBook dataForOrderBook)
+      public void GetBestBidAsk(DataForOrderBook dataForOrderBook)
         {
             BestBidPrice = dataForOrderBook.bids[0][0];
             BestBidSize = dataForOrderBook.bids[0][1];
             BestAskPrice = dataForOrderBook.asks[0][0];
             BestAskSize = dataForOrderBook.asks[0][1];
         }
-       
         public float BestBidPrice { get; set; }
         public float BestBidSize { get; set; }
         public float BestAskPrice { get; set; }

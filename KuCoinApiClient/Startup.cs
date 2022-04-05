@@ -23,7 +23,6 @@ namespace KuCoinApiClient
         {
             Configuration = configuration;
         }
-
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -52,57 +51,10 @@ namespace KuCoinApiClient
 
             app.UseAuthorization();
 
-            DataForOrderBook dataForOrderBook = new DataForOrderBook();
-            ConcurrentQueue<ChangesStreamBuffer> changesStreamBuffers = new ConcurrentQueue<ChangesStreamBuffer>();
+            
 
             app.Use(async (context, next) =>
-            {                                
-                string MessageFromSocket = "null";
-                GetTokenMessageService getTokenMessageServ = new GetTokenMessageService();
-                var token = await getTokenMessageServ.GetToken();
-                var socket = new WebSocket("wss://ws-api.kucoin.com/endpoint?token=" + token);
-                socket.MessageReceived += (s, e) =>
-                {
-                    MessageFromSocket = e.Message.ToString();                    
-                    var chStrBuffer = JsonConvert.DeserializeObject<ChangesStreamBuffer>(MessageFromSocket);
-                    if (chStrBuffer != null && chStrBuffer.data != null)
-                    {
-                        changesStreamBuffers.Enqueue(chStrBuffer);
-                    }                                     
-                };
-                socket.Opened += (s, e) => { socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/market/level2:BTC-USDT\", \"response\": true }"); };
-                socket.Open();
-
-                //wait for receveing first two messages
-                await Task.Run(()=>
-                {
-                    while (changesStreamBuffers.Count < 2)
-                    {
-                    }
-                });
-                // переходимо до наступного мідлвера
-                await next.Invoke();
-            });
-
-            app.Use(async (context, next) =>
-            {                   
-                DataForOrderBook dataForOrderBook = new DataForOrderBook(); 
-                GetOrderbooktService getOrderbook = new GetOrderbooktService("BTC-USDT");
-                dataForOrderBook = await getOrderbook.GetOrderbook();    // make a snapsot of OrderBook  
-                BestBidAsk bestBidAsk = new BestBidAsk(dataForOrderBook);
-                logger.LogInformation(bestBidAsk.ToString());
-                dataForOrderBook.BestAskBidChanchedEvent += () => { logger.LogInformation(bestBidAsk.ToString()); };
-                Task.Run(() =>
-                {
-                    while (true)  // unbroken keep processing messages (apply changes to the snapshot)
-                    {
-                        var hasoOne = changesStreamBuffers.TryDequeue(out var buffer);
-                        if (hasoOne)
-                        {
-                            dataForOrderBook.AcceptChanges(buffer);                           
-                        }      
-                    }
-                });
+            {     
                 await next.Invoke();
             });
 
