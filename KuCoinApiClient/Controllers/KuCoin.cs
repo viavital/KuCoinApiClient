@@ -29,7 +29,6 @@ namespace KuCoinApiClient.Controllers
         public KuCoin(ILogger<KuCoin> logger)
         {
             _logger = logger;
-
         }
         
         public async Task<IActionResult> Market()
@@ -44,10 +43,12 @@ namespace KuCoinApiClient.Controllers
                 MessageFromSocket = e.Message.ToString();
                 var chStrBuffer = JsonConvert.DeserializeObject<ChangesStreamBuffer>(MessageFromSocket);
                 if (chStrBuffer != null && chStrBuffer.data != null)
+                Task.Run(() =>
                 {
-                    changesStreamBuffers.Enqueue(chStrBuffer); 
-                }
+                   dataForOrderBook.AcceptChanges(chStrBuffer);
+                });
             };
+            
             socket.Opened += (s, e) => { _logger.LogInformation("socket established"); socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/market/level2:BTC-USDT\", \"response\": true }"); };
             socket.Closed += (s, e) => { _logger.LogInformation("Socket closed"); };
             socket.Open();
@@ -62,17 +63,7 @@ namespace KuCoinApiClient.Controllers
             bestBidAsk.GetBestBidAsk(dataForOrderBook);
             _logger.LogInformation(bestBidAsk.ToString() + " first request");
            
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    var hasoOne = changesStreamBuffers.TryDequeue(out var buffer);
-                    if (hasoOne)
-                    {
-                        dataForOrderBook.AcceptChanges(buffer);
-                    };
-                }
-            });
+            
             // make a snapsot of OrderBook every 5sec
 
             System.Timers.Timer timer = new System.Timers.Timer(5000);
@@ -86,12 +77,9 @@ namespace KuCoinApiClient.Controllers
             };
             timer.Start();
 
-
             ViewBag.MarketData = bestBidAsk.ToString();
             return View();
         }
-
-       
     }        
  }
 
