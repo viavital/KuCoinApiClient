@@ -29,6 +29,11 @@ namespace KuCoinApiClient
         public void ConfigureServices(IServiceCollection services)
         {           
             services.AddControllersWithViews();
+            services.AddTransient<HttpService>();
+            services.AddTransient<OrderBookService>();
+            services.AddTransient<KucoinProviderService>();
+            services.AddSingleton<KucoinMessagingService>();
+            services.AddSingleton<MessagesStorage>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -40,7 +45,7 @@ namespace KuCoinApiClient
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
+                //app.UseExceptionHandler("/Home/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
@@ -51,18 +56,12 @@ namespace KuCoinApiClient
 
             app.UseAuthorization();
 
-            
-
-            app.Use(async (context, next) =>
-            {     
-                await next.Invoke();
-            });
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=KuCoin}/{action=Market}/{id?}");
+                    pattern: "{controller=KuCoin}/{action=GetKucoinDefault}/{id?}");
             });
         }
     }
