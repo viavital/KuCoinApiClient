@@ -21,33 +21,31 @@ namespace KuCoinApiClient.Controllers
 {
     public class KuCoin : Controller
     {
-        private readonly ILogger<KuCoin> _logger;
-        DataForOrderBook dataForOrderBook = new DataForOrderBook();
-        BestBidAsk bestBidAsk = new BestBidAsk();
-        ConcurrentQueue<ChangesStreamBuffer> changesStreamBuffers = new ConcurrentQueue<ChangesStreamBuffer>();
-        GetOrderbooktService getOrderbook = new GetOrderbooktService("BTC-USDT");
-        public KuCoin(ILogger<KuCoin> logger)
-        {
-            _logger = logger;
+        private readonly KucoinProviderService kucoinProvider;
 
-        }
-        
-        public async Task<IActionResult> Market()
+        public KuCoin(KucoinProviderService kucoinProvider)
         {
-            string MessageFromSocket = "null";
-            GetTokenMessageService getTokenMessageServ = new GetTokenMessageService();
-            var tokenForConnection = await getTokenMessageServ.GetToken();
-            var socket = new WebSocket("wss://ws-api.kucoin.com/endpoint?token=" + tokenForConnection);
+            this.kucoinProvider = kucoinProvider;
+        }
+<<<<<<< Updated upstream
+
+       //[HttpGet("default")]
+        public Task<ActionResult<StatusDTO>> GetKucoinDefault()
+        {
+            return GetKucoin("BTC-USDT");
+        }
 
             socket.MessageReceived +=  (s, e) =>
             {
                 MessageFromSocket = e.Message.ToString();
                 var chStrBuffer = JsonConvert.DeserializeObject<ChangesStreamBuffer>(MessageFromSocket);
                 if (chStrBuffer != null && chStrBuffer.data != null)
+                Task.Run(() =>
                 {
-                    changesStreamBuffers.Enqueue(chStrBuffer); 
-                }
+                   dataForOrderBook.AcceptChanges(chStrBuffer);
+                });
             };
+            
             socket.Opened += (s, e) => { _logger.LogInformation("socket established"); socket.Send("{\"id\":1545910660740, \"type\":\"subscribe\",\"topic\": \"/market/level2:BTC-USDT\", \"response\": true }"); };
             socket.Closed += (s, e) => { _logger.LogInformation("Socket closed"); };
             socket.Open();
@@ -55,40 +53,28 @@ namespace KuCoinApiClient.Controllers
             dataForOrderBook = await getOrderbook.GetOrderbook();
             dataForOrderBook.BestAskBidChanchedEvent += () =>
             {
-                bestBidAsk.GetBestBidAsk(dataForOrderBook);
-                _logger.LogInformation(bestBidAsk.ToString() + " from changes");
-            };
+                return NotFound($"Pair={pairId} can not be received!");
+            }
+=======
+>>>>>>> Stashed changes
 
-            bestBidAsk.GetBestBidAsk(dataForOrderBook);
-            _logger.LogInformation(bestBidAsk.ToString() + " first request");
-           
-            Task.Run(() =>
+       //[HttpGet("default")]
+        public Task<ActionResult<StatusDTO>> GetKucoinDefault()
+        {
+            return GetKucoin("BTC-USDT");
+        }
+
+        [HttpGet("{pairId}")]
+        public async Task<ActionResult<StatusDTO>> GetKucoin(string pairId)
+        {
+            var result = await kucoinProvider.GetInfo(pairId);
+
+            if (result == null)
             {
-                while (true)
-                {
-                    var hasoOne = changesStreamBuffers.TryDequeue(out var buffer);
-                    if (hasoOne)
-                    {
-                        dataForOrderBook.AcceptChanges(buffer);
-                    };
-                }
-            });
-            // make a snapsot of OrderBook every 5sec
+                return NotFound($"Pair={pairId} can not be received!");
+            }
 
-            System.Timers.Timer timer = new System.Timers.Timer(5000);
-
-            timer.Elapsed += async (s, e) =>
-            {
-                _logger.LogInformation("new time cycle...");
-                dataForOrderBook = await getOrderbook.GetOrderbook();
-                bestBidAsk.GetBestBidAsk(dataForOrderBook);
-                _logger.LogInformation(bestBidAsk.ToString() + "  from snapshot");
-            };
-            timer.Start();
-
-
-            ViewBag.MarketData = bestBidAsk.ToString();
-            return View();
+            return Json(result);
         }
 
        
