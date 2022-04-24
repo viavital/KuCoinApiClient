@@ -13,7 +13,7 @@ namespace KuCoinApiClient
 
         public MessagesStorage()
         {
-            const int MAX_SIZE = 10000;
+            const int MAX_SIZE = 1000;
             _bids = new FixedSizeQueue<CoinItemMessageModel>(MAX_SIZE);
             _asks = new FixedSizeQueue<CoinItemMessageModel>(MAX_SIZE);
         }

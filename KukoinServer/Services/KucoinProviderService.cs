@@ -7,12 +7,14 @@ namespace KuCoinApiClient.Services
         private readonly KucoinMessagingService _messagingService;
         private readonly OrderBookService _orderBookService;
         private readonly MessagesStorage _messagesStorage;
+        private readonly ILogger _logger;
 
-        public KucoinProviderService(KucoinMessagingService messagingService, OrderBookService orderBookService, MessagesStorage messagesStorage)
+        public KucoinProviderService(KucoinMessagingService messagingService, OrderBookService orderBookService, MessagesStorage messagesStorage, ILogger<KucoinProviderService> logger)
         {
             _messagingService = messagingService;
             _orderBookService = orderBookService;
             _messagesStorage = messagesStorage;
+            _logger = logger;
         }
 
         internal async Task<StatusDTO> GetInfo(string pairId)
@@ -20,9 +22,11 @@ namespace KuCoinApiClient.Services
             if (!_messagingService.isConnectedAndReady(pairId))
             {
                 var isSucess = await _messagingService.ConnectToSocket(pairId);
+                
                 if (!isSucess)
                 {
-                    return null; // log error can not connect
+                    _logger.LogError("error can not connect")
+                    return null; 
                 }
             }
 
@@ -39,7 +43,7 @@ namespace KuCoinApiClient.Services
             }
 
             var orderBook = await _orderBookService.GetOrderBook(pairId);
-            if(orderBook == null)
+            if (orderBook == null)
             {
                 return null; // log error order book not found
             }
@@ -47,7 +51,7 @@ namespace KuCoinApiClient.Services
             var filteredMessage = DropOldSequencesAndZeroPrices(messages, orderBook.sequence);
             var orderBookUpdated = FilterEmptyFromOrderBookAndUpdatePrices(orderBook, filteredMessage);
 
-            var statusDTO = CreateResultDTO(orderBookUpdated, pairId);
+            var statusDTO = CreateResultDTO(orderBook, pairId);
             return statusDTO;
         }
 
@@ -71,7 +75,7 @@ namespace KuCoinApiClient.Services
                 var updatedPriceAsk = filteredMessage.asks.FirstOrDefault(a => a.price == orderAsk.price);
                 if (updatedPriceAsk != null)
                 {
-                    orderAsk.price = updatedPriceAsk.price;
+                    orderAsk.size = updatedPriceAsk.size;
                 }
             }
 
@@ -80,7 +84,7 @@ namespace KuCoinApiClient.Services
                 var updatedPriceBid = filteredMessage.bids.FirstOrDefault(a => a.price == orderBid.price);
                 if (updatedPriceBid != null)
                 {
-                    orderBid.price = updatedPriceBid.price;
+                    orderBid.size = updatedPriceBid.size;
                 }
             }
 

@@ -60,7 +60,7 @@ namespace KuCoinApiClient.Services
             _socket = new WebSocket(initialData.instanceServers[0].endpoint + "?token=" + initialData.token);
             _socket.Opened += OnSocketOpened;
             _socket.Closed += OnSocketClosed;
-            _socket.MessageReceived += OnMessageReceived;
+            _socket.MessageReceived += OnMessageReceived;   
         }
 
         private void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
