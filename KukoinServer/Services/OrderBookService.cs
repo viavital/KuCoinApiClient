@@ -6,8 +6,9 @@ namespace KuCoinApiClient.Services
     public class OrderBookService
     {
         private readonly HttpService _httpService;
+        private readonly ILogger _logger;
 
-        public OrderBookService(HttpService httpService)
+        public OrderBookService(HttpService httpService, ILogger<OrderBookService> logger)
         {
             _httpService = httpService;
         }
@@ -17,7 +18,8 @@ namespace KuCoinApiClient.Services
             var response = await _httpService.DoGet<OrderBookResponseModel>(KucoinSettings.BaseUrl + "/api/v1/market/orderbook/level2_20?symbol=" + pairId);
             if (response == null)
             {
-                return null; //log order book response error
+                _logger.LogError("order book response error");
+                return null; 
             }
             return new OrderBookDto(response.sequence, response.bids, response.asks);
         }

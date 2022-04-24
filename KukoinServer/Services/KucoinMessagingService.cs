@@ -1,6 +1,7 @@
 ﻿using KuCoinApiClient.Config;
 using KuCoinApiClient.Model;
 using Newtonsoft.Json;
+using System.Timers;
 using WebSocket4Net;
 
 namespace KuCoinApiClient.Services
@@ -10,30 +11,38 @@ namespace KuCoinApiClient.Services
         private readonly HttpService _httpService;
         private readonly MessagesStorage _storage;
         private readonly string _subscriptionId;
+        private readonly ILogger _logger;
 
         private string _currentPair;
         private WebSocket _socket;
+        private int pingInterval;
+        private int pingTimeout;
+        private System.Timers.Timer TimerPingPong;   
 
         //todo those bools better to make enum flags "state"
         private bool _isConnected;
         private bool _isWelcomeReceived;
-        private bool _isSubscribedAndReady;
+        private bool _isSubscribedAndReady;       
 
         private TaskCompletionSource<bool> _connectTcs;
+        private TaskCompletionSource _pingPongTcs;
 
-        public KucoinMessagingService(HttpService httpService, MessagesStorage storage)
+        public KucoinMessagingService(HttpService httpService, MessagesStorage storage, ILogger<KucoinMessagingService> logger)
         {
             _httpService = httpService;
             _connectTcs = new TaskCompletionSource<bool>();
+            _pingPongTcs = new TaskCompletionSource();
             _subscriptionId = Guid.NewGuid().ToString();
             _storage = storage;
+            _logger = logger;
         }
 
         internal async Task<bool> ConnectToSocket(string pairId)
         {
             if (!string.IsNullOrEmpty(_currentPair) && _currentPair != pairId)
             {
-                return false; //todo log wrong pair
+                _logger.LogError("wrong pair (ConnectToSocket)");
+                return false; 
             }
             _currentPair = pairId;
 
@@ -42,7 +51,8 @@ namespace KuCoinApiClient.Services
                 var initialData = await GetInitData();
                 if (initialData == null)
                 {
-                    return false; //todo add log
+                    _logger.LogError("wrong bad request (GetInitData)");
+                    return false; 
                 }
 
                 CreateSocket(initialData);
@@ -57,13 +67,15 @@ namespace KuCoinApiClient.Services
 
         private void CreateSocket(SocketInitInfoModel initialData)
         {
-            _socket = new WebSocket(initialData.instanceServers[0].endpoint + "?token=" + initialData.token);
+            _socket = new WebSocket(initialData.instanceServers[0].endpoint + "?token=" + initialData.token);            
+             pingInterval = initialData.instanceServers[0].pingInterval;
+             pingTimeout = initialData.instanceServers[0].pingTimeout;
             _socket.Opened += OnSocketOpened;
             _socket.Closed += OnSocketClosed;
             _socket.MessageReceived += OnMessageReceived;   
         }
 
-        private void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
+        private async void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
         {
             if (_isSubscribedAndReady)
             {
@@ -76,12 +88,13 @@ namespace KuCoinApiClient.Services
                 var simpleMessage = JsonConvert.DeserializeObject<SimpleMessageModel>(e.Message);
                 if (simpleMessage?.type == "welcome")
                 {
-                    SubscribeToPair();
-                    //todo start ping pong
+                    var id = simpleMessage.id;
+                    SubscribeToPair();                    
                     _isWelcomeReceived = true;
                     return;
-                }
-                _connectTcs.TrySetResult(false); //todo log welcome not received
+                }                
+                _logger.LogError("didn't receive Welcome Message");
+                _connectTcs.TrySetResult(false); 
                 return;
             }
             
@@ -94,7 +107,8 @@ namespace KuCoinApiClient.Services
                     _connectTcs.TrySetResult(true);
                     return;
                 }
-                _connectTcs.TrySetResult(false); //todo log subscription ack not received
+                _logger.LogError("subscription ack not received");
+                _connectTcs.TrySetResult(false); 
                 return;
             }
         }
@@ -104,9 +118,16 @@ namespace KuCoinApiClient.Services
             var model = JsonConvert.DeserializeObject<FullMessageModel>(e.Message);
             if (model == null || model.data == null || model.data.changes == null)
             {
-                return; //todo log
+              var pongModel = JsonConvert.DeserializeObject<SimpleMessageModel>(e.Message);
+                if (pongModel.type == "pong")
+                {
+                   _pingPongTcs.TrySetResult();
+                   _logger.LogInformation("pong received - {0}", e.Message);
+                    return;
+                }
+                _logger.LogError("couldn't deserialize message (HandleRegularMessage)");
+                return; 
             }
-
             _storage.AddToChache(model.data.changes);           
         }
 
@@ -122,20 +143,53 @@ namespace KuCoinApiClient.Services
             _socket.Send(reqJson);
         }
 
+
         private void OnSocketClosed(object? sender, EventArgs e)
         {
             _isConnected = false;
             _isWelcomeReceived = false;
             _isSubscribedAndReady = false;
-            //todo log socket connection closed + time
-
+            _logger.LogInformation("Socket is closed" + DateTime.Now);
+            TimerPingPong.Stop();
+            
             ConnectToSocket(_currentPair); //reconnect, stupid simple solution
         }
 
         private void OnSocketOpened(object? sender, EventArgs e)
         {
+            _logger.LogInformation("Socket is opened" + DateTime.Now);
             _isConnected = true;
-            //todo log socket connection opened + time
+            SetTimer();
+            TimerPingPong.Start();
+            
+        }
+
+        private async void RunAutoPing(object? sender, EventArgs e)
+        {
+            if (_isConnected) 
+            {
+                Random randomId = new Random();
+                SimpleMessageModel PingMess = new SimpleMessageModel() { id = randomId.Next(0, 100000000).ToString(), type = "ping" };
+                var serializedPingMess = JsonConvert.SerializeObject(PingMess);
+                _socket.Send(serializedPingMess);
+                _logger.LogInformation("Ping sent - {0}", serializedPingMess);
+                var task = await Task.WhenAny(_pingPongTcs.Task, Task.Delay(pingTimeout));
+                if (_pingPongTcs.Task.IsCompleted)
+                {
+                    _pingPongTcs = new TaskCompletionSource();
+                    return;
+                }
+                _isConnected = false;
+                _logger.LogError("pong didn't receive");
+                _socket.CloseAsync();
+            }
+        }
+        private void SetTimer()
+        {            
+            TimerPingPong = new System.Timers.Timer(pingInterval);
+            TimerPingPong.Elapsed += RunAutoPing;
+            TimerPingPong.AutoReset = true;
+            TimerPingPong.Enabled = true;            
         }
 
         internal bool isConnectedAndReady(string pairId)

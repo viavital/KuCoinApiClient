@@ -25,7 +25,7 @@ namespace KuCoinApiClient.Services
                 
                 if (!isSucess)
                 {
-                    _logger.LogError("error can not connect")
+                    _logger.LogError("error can not connect - (_messagingService.ConnectToSocket)");
                     return null; 
                 }
             }
@@ -33,19 +33,22 @@ namespace KuCoinApiClient.Services
             var hasMinData = await _messagesStorage.WaitData();
             if (!hasMinData)
             {
-                return null; //log error lack of data
+                _logger.LogError("error lack of data (_messagesStorage.WaitData)");
+                return null; 
             }
 
             var messages = _messagesStorage.GetMessages();
             if (messages == null)
             {
-                return null; // log error messages not found
+                _logger.LogError("error messages not found (_messagesStorage.GetMessages)");
+                return null; 
             }
 
             var orderBook = await _orderBookService.GetOrderBook(pairId);
             if (orderBook == null)
             {
-                return null; // log error order book not found
+                _logger.LogError("error order book not found (_orderBookService.GetOrderBook)");
+                return null; 
             }
 
             var filteredMessage = DropOldSequencesAndZeroPrices(messages, orderBook.sequence);
@@ -64,6 +67,7 @@ namespace KuCoinApiClient.Services
 
         private OrderBookDto FilterEmptyFromOrderBookAndUpdatePrices(OrderBookDto orderBook, AsksBidsDTO filteredMessage)
         {
+            _logger.LogInformation($"Begin updating OrderBook: Primary OrderBookResult - BestAsk - {orderBook.asks[0].price} size -{orderBook.asks[0].size} ; BestBid - {orderBook.bids[0].price} size -{orderBook.bids[1].size}");
             var noAmountAsksPrices = filteredMessage.asks.Where(a => a.size == 0).Select(a => a.price);
             var noAmountBidsPrices = filteredMessage.bids.Where(b => b.size == 0).Select(b => b.price);
 
@@ -92,7 +96,7 @@ namespace KuCoinApiClient.Services
         }
 
         private StatusDTO CreateResultDTO(OrderBookDto orderBookWithUpdatedPrizes, string pairId)
-        {
+        {            
             var minAskOrdered = orderBookWithUpdatedPrizes.asks.OrderBy(a => a.price);
             var maxBidOrdered = orderBookWithUpdatedPrizes.bids.OrderByDescending(b => b.price);
 
@@ -104,6 +108,7 @@ namespace KuCoinApiClient.Services
 
             var maxBidPrice = maxBid?.price ?? 0;
             var maxBidAmount = maxBid?.size ?? 0;
+            _logger.LogInformation($"End of updating OrderBook:Updated OrderBookResult - BestAsk - {minAskPrice} - size {minAskAmount}; BestBid - {maxBidPrice} size {maxBidAmount}");
             return new StatusDTO(minAskPrice, minAskAmount, maxBidPrice, maxBidAmount, pairId);
         }
     }
