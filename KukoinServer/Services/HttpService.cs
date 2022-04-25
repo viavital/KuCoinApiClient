@@ -6,6 +6,11 @@ namespace KuCoinApiClient.Services
 {
     public class HttpService
     {
+        private readonly ILogger _logger;
+        public HttpService(ILogger<HttpService> logger)
+        {
+            _logger = logger;
+        }
         public async Task<T> DoPost<T>(string url, Object body) where T : class
         {
             try
@@ -37,8 +42,7 @@ namespace KuCoinApiClient.Services
             }
             catch (HttpRequestException e)
             {
-                Console.WriteLine("\nException Caught!");
-                Console.WriteLine("Message :{0} ", e.Message);
+                _logger.LogError("\nException Caught Message :{0}", e.Message!);                
                 return null;
             }
         }

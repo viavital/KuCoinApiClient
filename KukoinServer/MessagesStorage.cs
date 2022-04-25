@@ -5,7 +5,7 @@ namespace KuCoinApiClient
 {
     public class MessagesStorage
     {
-        //todo maybe better to use one collection, and add type (bid, ask) to model ???
+        
         private readonly FixedSizeQueue<CoinItemMessageModel> _bids;
         private readonly FixedSizeQueue<CoinItemMessageModel> _asks;
 

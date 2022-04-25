@@ -18,8 +18,7 @@ namespace KuCoinApiClient.Services
         private int pingInterval;
         private int pingTimeout;
         private System.Timers.Timer TimerPingPong;   
-
-        //todo those bools better to make enum flags "state"
+        
         private bool _isConnected;
         private bool _isWelcomeReceived;
         private bool _isSubscribedAndReady;       
@@ -152,7 +151,7 @@ namespace KuCoinApiClient.Services
             _logger.LogInformation("Socket is closed" + DateTime.Now);
             TimerPingPong.Stop();
             
-            ConnectToSocket(_currentPair); //reconnect, stupid simple solution
+            ConnectToSocket(_currentPair); 
         }
 
         private void OnSocketOpened(object? sender, EventArgs e)

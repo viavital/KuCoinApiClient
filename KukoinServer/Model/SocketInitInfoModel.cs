@@ -12,7 +12,7 @@
         public string endpoint { get; set; }
         public string protocol { get; set; }
         public bool encrypt { get; set; }
-        public int pingInterval { get; set; } //in ms
-        public int pingTimeout { get; set; } //in ms
+        public int pingInterval { get; set; } 
+        public int pingTimeout { get; set; } 
     }
 }
