@@ -1,15 +1,6 @@
-<<<<<<< HEAD:KuCoinApiClient/Services/HttpService.cs
-﻿using KuCoinApiClient.Models;
-using Newtonsoft.Json;
-using System;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-=======
 ﻿using KuCoinApiClient.Model;
 using Newtonsoft.Json;
 using System.Text;
->>>>>>> MaxSizeBuffer:KukoinServer/Services/HttpService.cs
 
 namespace KuCoinApiClient.Services
 {

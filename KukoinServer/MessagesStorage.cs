@@ -1,11 +1,5 @@
-<<<<<<< HEAD:KuCoinApiClient/MessagesStorage.cs
-﻿using KuCoinApiClient.Models;
-using KuCoinApiClient.Utils;
-using System.Threading.Tasks;
-=======
 ﻿using KuCoinApiClient.Model;
 using KuCoinApiClient.Utils;
->>>>>>> MaxSizeBuffer:KukoinServer/MessagesStorage.cs
 
 namespace KuCoinApiClient
 {
@@ -19,11 +13,7 @@ namespace KuCoinApiClient
 
         public MessagesStorage()
         {
-<<<<<<< HEAD:KuCoinApiClient/MessagesStorage.cs
-            const int MAX_SIZE = 10000;
-=======
             const int MAX_SIZE = 1000;
->>>>>>> MaxSizeBuffer:KukoinServer/MessagesStorage.cs
             _bids = new FixedSizeQueue<CoinItemMessageModel>(MAX_SIZE);
             _asks = new FixedSizeQueue<CoinItemMessageModel>(MAX_SIZE);
         }
@@ -31,21 +21,13 @@ namespace KuCoinApiClient
         public void AddToChache(FullMessageModelDataChanges changes)
         {
             var asks = changes.asks;
-<<<<<<< HEAD:KuCoinApiClient/MessagesStorage.cs
-            foreach (var ask in asks)
-=======
             foreach(var ask in asks)
->>>>>>> MaxSizeBuffer:KukoinServer/MessagesStorage.cs
             {
                 _asks.Enqueue(new CoinItemMessageModel(ask));
             }
 
             var bids = changes.bids;
-<<<<<<< HEAD:KuCoinApiClient/MessagesStorage.cs
-            foreach (var bid in bids)
-=======
             foreach(var bid in bids)
->>>>>>> MaxSizeBuffer:KukoinServer/MessagesStorage.cs
             {
                 _bids.Enqueue(new CoinItemMessageModel(bid));
             }

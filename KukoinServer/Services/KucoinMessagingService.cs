@@ -1,14 +1,7 @@
 ﻿using KuCoinApiClient.Config;
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-using KuCoinApiClient.Models;
-using Newtonsoft.Json;
-using System.Threading.Tasks;
-using System;
-=======
 using KuCoinApiClient.Model;
 using Newtonsoft.Json;
 using System.Timers;
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
 using WebSocket4Net;
 
 namespace KuCoinApiClient.Services
@@ -18,11 +11,6 @@ namespace KuCoinApiClient.Services
         private readonly HttpService _httpService;
         private readonly MessagesStorage _storage;
         private readonly string _subscriptionId;
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-
-        private string _currentPair;
-        private WebSocket _socket;
-=======
         private readonly ILogger _logger;
 
         private string _currentPair;
@@ -30,23 +18,10 @@ namespace KuCoinApiClient.Services
         private int pingInterval;
         private int pingTimeout;
         private System.Timers.Timer TimerPingPong;   
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
 
         //todo those bools better to make enum flags "state"
         private bool _isConnected;
         private bool _isWelcomeReceived;
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-        private bool _isSubscribedAndReady;
-
-        private TaskCompletionSource<bool> _connectTcs;
-
-        public KucoinMessagingService(HttpService httpService, MessagesStorage storage)
-        {
-            _httpService = httpService;
-            _connectTcs = new TaskCompletionSource<bool>();
-            _subscriptionId = Guid.NewGuid().ToString();
-            _storage = storage;
-=======
         private bool _isSubscribedAndReady;       
 
         private TaskCompletionSource<bool> _connectTcs;
@@ -60,19 +35,14 @@ namespace KuCoinApiClient.Services
             _subscriptionId = Guid.NewGuid().ToString();
             _storage = storage;
             _logger = logger;
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         }
 
         internal async Task<bool> ConnectToSocket(string pairId)
         {
             if (!string.IsNullOrEmpty(_currentPair) && _currentPair != pairId)
             {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-                return false; //todo log wrong pair
-=======
                 _logger.LogError("wrong pair (ConnectToSocket)");
                 return false; 
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
             }
             _currentPair = pairId;
 
@@ -81,12 +51,8 @@ namespace KuCoinApiClient.Services
                 var initialData = await GetInitData();
                 if (initialData == null)
                 {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-                    return false; //todo add log
-=======
                     _logger.LogError("wrong bad request (GetInitData)");
                     return false; 
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
                 }
 
                 CreateSocket(initialData);
@@ -101,15 +67,6 @@ namespace KuCoinApiClient.Services
 
         private void CreateSocket(SocketInitInfoModel initialData)
         {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-            _socket = new WebSocket(initialData.instanceServers[0].endpoint + "?token=" + initialData.token);
-            _socket.Opened += OnSocketOpened;
-            _socket.Closed += OnSocketClosed;
-            _socket.MessageReceived += OnMessageReceived;
-        }
-
-        private void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
-=======
             _socket = new WebSocket(initialData.instanceServers[0].endpoint + "?token=" + initialData.token);            
              pingInterval = initialData.instanceServers[0].pingInterval;
              pingTimeout = initialData.instanceServers[0].pingTimeout;
@@ -119,7 +76,6 @@ namespace KuCoinApiClient.Services
         }
 
         private async void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         {
             if (_isSubscribedAndReady)
             {
@@ -132,17 +88,6 @@ namespace KuCoinApiClient.Services
                 var simpleMessage = JsonConvert.DeserializeObject<SimpleMessageModel>(e.Message);
                 if (simpleMessage?.type == "welcome")
                 {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-                    SubscribeToPair();
-                    //todo start ping pong
-                    _isWelcomeReceived = true;
-                    return;
-                }
-                _connectTcs.TrySetResult(false); //todo log welcome not received
-                return;
-            }
-
-=======
                     var id = simpleMessage.id;
                     SubscribeToPair();                    
                     _isWelcomeReceived = true;
@@ -153,7 +98,6 @@ namespace KuCoinApiClient.Services
                 return;
             }
             
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
             if (!_isSubscribedAndReady)
             {
                 var simpleMessage = JsonConvert.DeserializeObject<SimpleMessageModel>(e.Message);
@@ -163,12 +107,8 @@ namespace KuCoinApiClient.Services
                     _connectTcs.TrySetResult(true);
                     return;
                 }
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-                _connectTcs.TrySetResult(false); //todo log subscription ack not received
-=======
                 _logger.LogError("subscription ack not received");
                 _connectTcs.TrySetResult(false); 
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
                 return;
             }
         }
@@ -178,12 +118,6 @@ namespace KuCoinApiClient.Services
             var model = JsonConvert.DeserializeObject<FullMessageModel>(e.Message);
             if (model == null || model.data == null || model.data.changes == null)
             {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-                return; //todo log
-            }
-
-            _storage.AddToChache(model.data.changes);
-=======
               var pongModel = JsonConvert.DeserializeObject<SimpleMessageModel>(e.Message);
                 if (pongModel.type == "pong")
                 {
@@ -195,7 +129,6 @@ namespace KuCoinApiClient.Services
                 return; 
             }
             _storage.AddToChache(model.data.changes);           
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         }
 
         private void SubscribeToPair()
@@ -210,32 +143,20 @@ namespace KuCoinApiClient.Services
             _socket.Send(reqJson);
         }
 
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-=======
 
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         private void OnSocketClosed(object? sender, EventArgs e)
         {
             _isConnected = false;
             _isWelcomeReceived = false;
             _isSubscribedAndReady = false;
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-            //todo log socket connection closed + time
-
-=======
             _logger.LogInformation("Socket is closed" + DateTime.Now);
             TimerPingPong.Stop();
             
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
             ConnectToSocket(_currentPair); //reconnect, stupid simple solution
         }
 
         private void OnSocketOpened(object? sender, EventArgs e)
         {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-            _isConnected = true;
-            //todo log socket connection opened + time
-=======
             _logger.LogInformation("Socket is opened" + DateTime.Now);
             _isConnected = true;
             SetTimer();
@@ -269,7 +190,6 @@ namespace KuCoinApiClient.Services
             TimerPingPong.Elapsed += RunAutoPing;
             TimerPingPong.AutoReset = true;
             TimerPingPong.Enabled = true;            
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         }
 
         internal bool isConnectedAndReady(string pairId)
@@ -284,11 +204,7 @@ namespace KuCoinApiClient.Services
 
         private Task<SocketInitInfoModel> GetInitData()
         {
-<<<<<<< HEAD:KuCoinApiClient/Services/KucoinMessagingService.cs
-            return _httpService.DoPost<SocketInitInfoModel>(KucoinSettings.BaseUrl + "/api/v1/bullet-public", new { });
-=======
             return _httpService.DoPost<SocketInitInfoModel>(KucoinSettings.BaseUrl + "/api/v1/bullet-public", new {});
->>>>>>> MaxSizeBuffer:KukoinServer/Services/KucoinMessagingService.cs
         }
     }
 }

@@ -1,9 +1,3 @@
-<<<<<<< HEAD:KuCoinApiClient/Utils/FixedSizeQueue.cs
-﻿using System.Collections.Generic;
-
-namespace KuCoinApiClient.Utils
-{
-=======
 ﻿// Copyright (c) .NET Foundation and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // https://jonlabelle.com/snippets/view/csharp/fixed-size-queue
@@ -11,7 +5,6 @@ namespace KuCoinApiClient.Utils
 namespace KuCoinApiClient.Utils
 {
 
->>>>>>> MaxSizeBuffer:KukoinServer/Utils/FixedSizeQueue.cs
     /// <summary>
     /// A light fixed size queue.
     /// If Enqueue is called and queue's limit has reached the last item will be removed.
